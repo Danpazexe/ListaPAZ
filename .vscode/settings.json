@@ -6,5 +6,6 @@
         "bolt",
         "bottom",
         "card"
-    ]
+    ],
+    "java.compile.nullAnalysis.mode": "automatic"
 }

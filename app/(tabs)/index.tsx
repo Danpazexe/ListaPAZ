@@ -481,13 +481,6 @@ export default function ShoppingListScreen(props: any) {
     );
   };
 
-  const goToUserSelection = () => {
-    router.replace('/');
-  };
-
-  const goToSettings = () => {
-    router.push('/(tabs)/settings');
-  };
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.background, paddingTop: insets.top }}>
