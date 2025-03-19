@@ -19,13 +19,13 @@ import {
   SafeAreaView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Plus, Trash2, Check, Search, X, ShoppingBag } from 'lucide-react-native';
+import { Plus, Trash2, Check, Search, X, ShoppingBag, Edit } from 'lucide-react-native';
 import 'react-native-url-polyfill/auto';
 import { userThemes } from '../index';
-import { router } from 'expo-router';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RouteProp } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+
 import { 
   fetchItems, 
   addItem as addItemToDb, 
@@ -68,6 +68,8 @@ export default function ShoppingListScreen(props: any) {
   const insets = useSafeAreaInsets();
   const [showAddModal, setShowAddModal] = useState(false);
   const newItemInputRef = useRef(null);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
 
   useEffect(() => {
     loadItems();
@@ -280,6 +282,33 @@ export default function ShoppingListScreen(props: any) {
     }
   };
 
+  const startEditing = (item: Item) => {
+    setEditingItemId(item.id);
+    setEditText(item.name);
+  };
+
+  const saveEdit = async (id: string) => {
+    if (editText.trim()) {
+      // Atualizar localmente
+      const newItems = items.map(item => 
+        item.id === id ? { ...item, name: editText.trim() } : item
+      );
+      setItems(newItems);
+      saveItems(newItems);
+      
+      // Atualizar no Supabase
+      try {
+        await updateItemInDb(id, { name: editText.trim() });
+      } catch (error) {
+        console.error('Erro ao atualizar item:', error);
+      }
+      
+      // Limpar estado de edição
+      setEditingItemId(null);
+      setEditText('');
+    }
+  };
+
   const filteredItems = items
     .filter(item => {
       // Filtrar por tab (todos ou pendentes)
@@ -358,22 +387,38 @@ export default function ShoppingListScreen(props: any) {
           onPress={() => toggleItem(item.id)}>
           {item.completed && <Check size={16} color="#FFFFFF" />}
         </TouchableOpacity>
+        
         <Pressable 
           style={styles.itemContent}
           onPress={() => toggleItem(item.id)}>
-          <Text style={[
-            styles.itemText, 
-            { color: theme.textPrimary },
-            item.completed && [
-              styles.completedText,
-              { 
-                color: theme.textSecondary,
-                textDecorationColor: theme.textSecondary
-              }
-            ]
-          ]}>
-            {item.name}
-          </Text>
+          
+          {editingItemId === item.id ? (
+            <TextInput
+              style={[
+                styles.itemText,
+                { color: theme.textPrimary, borderBottomWidth: 1, borderBottomColor: theme.primary, paddingBottom: 5 }
+              ]}
+              value={editText}
+              onChangeText={setEditText}
+              autoFocus
+              onBlur={() => saveEdit(item.id)}
+              onSubmitEditing={() => saveEdit(item.id)}
+            />
+          ) : (
+            <Text style={[
+              styles.itemText, 
+              { color: theme.textPrimary },
+              item.completed && [
+                styles.completedText,
+                { 
+                  color: theme.textSecondary,
+                  textDecorationColor: theme.textSecondary
+                }
+              ]
+            ]}>
+              {item.name}
+            </Text>
+          )}
           
           {item.addedBy && (
             <Text style={[
@@ -390,7 +435,7 @@ export default function ShoppingListScreen(props: any) {
                 styles.quantityContainer,
                 { borderColor: theme.border }
               ]}>
-                <TouchableOpacity
+                <TouchableOpacity 
                   style={styles.quantityButton}
                   onPress={(e) => {
                     e.stopPropagation();
@@ -401,7 +446,7 @@ export default function ShoppingListScreen(props: any) {
                 <Text style={[styles.quantityText, { color: theme.textPrimary }]}>
                   {item.quantity}
                 </Text>
-                <TouchableOpacity
+                <TouchableOpacity 
                   style={styles.quantityButton}
                   onPress={(e) => {
                     e.stopPropagation();
@@ -417,19 +462,40 @@ export default function ShoppingListScreen(props: any) {
                 </Text>
               </View>
             )}
-            {!item.completed && (
-              <TouchableOpacity
-                style={[
-                  styles.deleteButton,
-                  { backgroundColor: theme.deleteButtonBackground }
-                ]}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  deleteItem(item.id, item.completed);
-                }}>
-                <Trash2 size={20} color={theme.deleteButtonColor} />
-              </TouchableOpacity>
-            )}
+            
+            <View style={{ flexDirection: 'row' }}>
+              {!item.completed && (
+                <TouchableOpacity
+                  style={[
+                    styles.actionButton, 
+                    { 
+                      marginRight: 10, 
+                      backgroundColor: '#E8F4FD',
+                      borderColor: 'transparent'
+                    }
+                  ]}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    startEditing(item);
+                  }}>
+                  <Edit size={20} color={theme.primary} />
+                </TouchableOpacity>
+              )}
+              
+              {!item.completed && (
+                <TouchableOpacity
+                  style={[
+                    styles.deleteButton,
+                    { backgroundColor: theme.deleteButtonBackground }
+                  ]}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    deleteItem(item.id, item.completed);
+                  }}>
+                  <Trash2 size={20} color={theme.deleteButtonColor} />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         </Pressable>
       </View>

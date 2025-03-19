@@ -34,6 +34,8 @@ export const userThemes = {
     deleteButtonBorder: '#FFCDD2',
     completedBorder: '#CFD8DC',
     completedCheckbox: '#78909C',
+    editButtonBackground: '#E8F4FD',
+    editButtonColor: '#3498DB',
   },
   Kivhia: {
     primary: '#6A1B9A',         // Roxo escuro com alto contraste
@@ -51,6 +53,8 @@ export const userThemes = {
     deleteButtonBorder: '#F8BBD0',
     completedBorder: '#D1C4E9',
     completedCheckbox: '#9575CD',
+    editButtonBackground: '#F3E5F5',
+    editButtonColor: '#8E24AA',
   }
 };
 
