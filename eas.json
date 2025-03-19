@@ -1,15 +1,21 @@
 {
   "build": {
     "preview": {
+      "distribution": "internal",
       "android": {
-        "buildType": "apk",
-        "gradleCommand": ":app:assembleDebug"
+        "buildType": "apk"
       }
+    },
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
     },
     "production": {}
   },
   "cli": {
-    "version": ">= 5.9.1",
-    "requireCommit": false
+    "version": ">= 3.13.3"
+  },
+  "submit": {
+    "production": {}
   }
 }

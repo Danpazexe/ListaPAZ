@@ -20,28 +20,20 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Plus, Trash2, Check, Search, X, ShoppingBag } from 'lucide-react-native';
-import { createClient } from '@supabase/supabase-js';
 import 'react-native-url-polyfill/auto';
 import { userThemes } from '../index';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-
-// Configuração do Supabase
-const supabaseUrl = 'https://wpdxxrgnolyycaepgdbt.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwZHh4cmdub2x5eWNhZXBnZGJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIwODQzOTMsImV4cCI6MjA1NzY2MDM5M30.T4Re_vkI9BeSE4MKX2OKkbQzQz5-ymOVLC8G8_U8E10';
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-interface Item {
-  id: string;
-  name: string;
-  completed: boolean;
-  quantity: number;
-  createdAt: number;
-  addedBy?: string;
-  priority?: boolean;
-}
+import { 
+  fetchItems, 
+  addItem as addItemToDb, 
+  updateItem as updateItemInDb, 
+  deleteItem as deleteItemFromDb,
+  setupRealtimeSubscription,
+  ShoppingItem
+} from '../lib/supabase';
 
 type RouteParams = {
   showAddModal?: boolean;
@@ -49,6 +41,16 @@ type RouteParams = {
 
 type Props = {
   route?: RouteProp<Record<string, RouteParams>, string>;
+};
+
+type Item = {
+  id: string;
+  name: string;
+  completed: boolean;
+  quantity: number;
+  createdAt: number;
+  addedBy?: string;
+  priority?: boolean;
 };
 
 export default function ShoppingListScreen(props: any) {
@@ -85,18 +87,11 @@ export default function ShoppingListScreen(props: any) {
       }
     );
 
-    // Configurar listener para mudanças em tempo real
-    const subscription = supabase
-      .channel('shopping_items_changes')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'shopping_items' 
-      }, payload => {
-        console.log('Mudança detectada:', payload);
-        loadItems();
-      })
-      .subscribe();
+    // Configurar listener para mudanças em tempo real usando a função importada
+    const subscription = setupRealtimeSubscription(() => {
+      console.log('Mudança detectada');
+      loadItems();
+    });
 
     // Limpar listeners ao desmontar
     return () => {
@@ -119,35 +114,30 @@ export default function ShoppingListScreen(props: any) {
   const loadItems = async () => {
     setIsLoading(true);
     try {
-      // Primeiro tentamos carregar do Supabase
-      const { data, error } = await supabase
-        .from('shopping_items')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Erro ao carregar do Supabase:', error);
-        // Se falhar, tentamos carregar do armazenamento local
-        const savedItems = await AsyncStorage.getItem('shoppingList');
-        if (savedItems) {
-          setItems(JSON.parse(savedItems));
-        }
-      } else {
-        // Formatar os dados do Supabase para o formato da aplicação
-        const formattedItems = data.map(item => ({
-          id: item.id,
-          name: item.name,
-          completed: item.completed,
-          quantity: item.quantity,
-          createdAt: new Date(item.created_at).getTime(),
-          addedBy: item.added_by,
-        }));
-        setItems(formattedItems);
-        // Atualizar o armazenamento local com os dados mais recentes
-        await AsyncStorage.setItem('shoppingList', JSON.stringify(formattedItems));
-      }
+      // Usar a função fetchItems em vez de chamar supabase diretamente
+      const data = await fetchItems();
+      
+      // Formatar os dados do Supabase para o formato da aplicação
+      const formattedItems = data.map(item => ({
+        id: item.id,
+        name: item.name,
+        completed: item.completed,
+        quantity: item.quantity,
+        createdAt: new Date(item.created_at).getTime(),
+        addedBy: item.added_by,
+        priority: item.priority
+      }));
+      
+      setItems(formattedItems);
+      // Atualizar o armazenamento local com os dados mais recentes
+      await AsyncStorage.setItem('shoppingList', JSON.stringify(formattedItems));
     } catch (error) {
       console.error('Erro ao carregar itens:', error);
+      // Se falhar, tentamos carregar do armazenamento local
+      const savedItems = await AsyncStorage.getItem('shoppingList');
+      if (savedItems) {
+        setItems(JSON.parse(savedItems));
+      }
       Alert.alert('Erro', 'Não foi possível carregar a lista');
     } finally {
       setIsLoading(false);
@@ -176,7 +166,6 @@ export default function ShoppingListScreen(props: any) {
 
   const saveItems = async (newItems: Item[]) => {
     try {
-      // Salvar localmente primeiro para garantir resposta rápida da UI
       await AsyncStorage.setItem('shoppingList', JSON.stringify(newItems));
     } catch (error) {
       console.error('Erro ao salvar localmente:', error);
@@ -191,7 +180,7 @@ export default function ShoppingListScreen(props: any) {
         completed: false,
         quantity: 1,
         createdAt: Date.now(),
-        addedBy: currentUser,
+        added_by: currentUser,
       };
 
       // Atualizar UI imediatamente
@@ -200,22 +189,9 @@ export default function ShoppingListScreen(props: any) {
       saveItems(newItems);
       setNewItem('');
 
-      // Salvar no Supabase
+      // Salvar no Supabase usando a função importada
       try {
-        const { error } = await supabase
-          .from('shopping_items')
-          .insert({
-            id: newItemData.id,
-            name: newItemData.name,
-            completed: newItemData.completed,
-            quantity: newItemData.quantity,
-            created_at: new Date(newItemData.createdAt).toISOString(),
-            added_by: newItemData.addedBy,
-          });
-
-        if (error) {
-          console.error('Erro ao adicionar item no Supabase:', error);
-        }
+        await addItemToDb(newItemData);
       } catch (error) {
         console.error('Erro ao adicionar item:', error);
       }
@@ -234,16 +210,9 @@ export default function ShoppingListScreen(props: any) {
     setItems(newItems);
     saveItems(newItems);
 
-    // Atualizar no Supabase
+    // Atualizar no Supabase usando a função importada
     try {
-      const { error } = await supabase
-        .from('shopping_items')
-        .update({ completed: !itemToUpdate.completed })
-        .eq('id', id);
-
-      if (error) {
-        console.error('Erro ao atualizar item no Supabase:', error);
-      }
+      await updateItemInDb(id, { completed: !itemToUpdate.completed });
     } catch (error) {
       console.error('Erro ao atualizar item:', error);
     }
@@ -278,16 +247,9 @@ export default function ShoppingListScreen(props: any) {
     setItems(newItems);
     saveItems(newItems);
 
-    // Atualizar no Supabase
+    // Atualizar no Supabase usando a função importada
     try {
-      const { error } = await supabase
-        .from('shopping_items')
-        .update({ quantity: newQuantity })
-        .eq('id', id);
-
-      if (error) {
-        console.error('Erro ao atualizar quantidade no Supabase:', error);
-      }
+      await updateItemInDb(id, { quantity: newQuantity });
     } catch (error) {
       console.error('Erro ao atualizar quantidade:', error);
     }
@@ -311,15 +273,8 @@ export default function ShoppingListScreen(props: any) {
       setItems(newItems);
       saveItems(newItems);
 
-      // Excluir do Supabase
-      const { error } = await supabase
-        .from('shopping_items')
-        .delete()
-        .eq('id', id);
-
-      if (error) {
-        console.error('Erro ao excluir item do Supabase:', error);
-      }
+      // Excluir do Supabase usando a função importada
+      await deleteItemFromDb(id);
     } catch (error) {
       console.error('Erro ao excluir item:', error);
     }

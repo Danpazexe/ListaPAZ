@@ -1,33 +1,38 @@
 {
   "expo": {
-    "name": "Lista de Compras",
-    "slug": "bolt-expo-nativewind",
+    "name": "Seu App",
+    "slug": "seu-app",
     "version": "1.0.0",
-    "assetBundlePatterns": ["**/*"],
-    "web": {
-      "bundler": "metro"
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
     },
-    "plugins": [
-      "expo-router"
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": [
+      "**/*"
     ],
-    "experiments": {
-      "typedRoutes": true
-    },
-    "extra": {
-      "router": {
-        "origin": false
-      },
-      "eas": {
-        "projectId": "1e83dbc1-1997-44ab-a35d-93af217ac9b8"
-      }
+    "ios": {
+      "supportsTablet": true
     },
     "android": {
-      "package": "com.pazzdan.boltexponativewind",
-      "newArchEnabled": false
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "package": "com.seuapp.seuappnome"
     },
-    "ios": {
-      "bundleIdentifier": "com.pazzdan.listacompras",
-      "newArchEnabled": false
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "a8c4c2a1-5842-4bac-a939-5e2f131ce7df"
+      }
     }
   }
 }

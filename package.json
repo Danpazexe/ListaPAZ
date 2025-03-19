@@ -8,19 +8,23 @@
     "build:web": "expo export --platform web",
     "lint": "expo lint",
     "android": "expo run:android",
-    "ios": "expo run:ios"
+    "build:android": "gerar-apk.bat"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.2.3",
+    "@expo/config-plugins": "~9.0.0",
+    "@expo/metro-config": "~0.19.0",
+    "@expo/prebuild-config": "~8.0.0",
     "@expo/vector-icons": "^14.0.2",
     "@lucide/lab": "^0.1.2",
     "@react-native-async-storage/async-storage": "1.23.1",
     "@react-navigation/bottom-tabs": "^7.2.0",
     "@react-navigation/native": "^7.0.14",
     "@supabase/supabase-js": "^2.49.1",
-    "expo": "~52.0.38",
+    "expo": "^52.0.39",
     "expo-blur": "^14.0.3",
     "expo-constants": "^17.0.5",
+    "expo-dev-client": "~5.0.14",
     "expo-font": "^13.0.3",
     "expo-haptics": "^14.0.1",
     "expo-linear-gradient": "^14.0.2",
@@ -36,7 +40,6 @@
     "react-dom": "18.3.1",
     "react-native": "0.76.7",
     "react-native-gesture-handler": "~2.20.2",
-    "react-native-reanimated": "^3.16.7",
     "react-native-safe-area-context": "^4.12.0",
     "react-native-screens": "~4.4.0",
     "react-native-svg": "15.8.0",
@@ -46,15 +49,20 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@babel/plugin-proposal-export-namespace-from": "^7.18.9",
     "@types/react": "~18.3.12",
     "typescript": "^5.3.3"
   },
   "expo": {
     "doctor": {
       "reactNativeDirectoryCheck": {
-        "exclude": ["lucide-react-native", "@lucide/lab"],
+        "exclude": [
+          "lucide-react-native",
+          "@lucide/lab"
+        ],
         "listUnknownPackages": false
       }
     }
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
