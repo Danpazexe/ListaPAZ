@@ -502,6 +502,20 @@ export default function ShoppingListScreen(props: any) {
     );
   };
 
+  const renderFloatingButton = () => {
+    return (
+      <View style={styles.floatingButtonContainer}>
+        <TouchableOpacity
+          style={[
+            styles.floatingAddButton,
+            { backgroundColor: theme.primary }
+          ]}
+          onPress={() => setShowAddModal(true)}>
+          <Plus size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.background, paddingTop: insets.top }}>
@@ -671,13 +685,7 @@ export default function ShoppingListScreen(props: any) {
             </View>
           </Modal>
 
-          <View style={[styles.bottomBar, { backgroundColor: theme.cardBackground }]}>
-            <TouchableOpacity 
-              style={[styles.bottomAddButton, { backgroundColor: theme.primary }]}
-              onPress={() => setShowAddModal(true)}>
-              <Plus size={24} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
+          {renderFloatingButton()}
         </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
@@ -1012,27 +1020,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  bottomBar: {
-    height: 70,
-    borderTopWidth: 1,
-    borderTopColor: '#E8EDF1',
-    justifyContent: 'center',
-    alignItems: 'center',
+  floatingButtonContainer: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    bottom: 30,
+    right: 30,
+    zIndex: 999,
   },
-  bottomAddButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  floatingAddButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 8,
   },
 });
