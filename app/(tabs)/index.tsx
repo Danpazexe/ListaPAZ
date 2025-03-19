@@ -438,44 +438,49 @@ export default function ShoppingListScreen() {
           onPress={() => toggleItem(item.id)}>
           
           <View style={styles.itemHeader}>
-            {editingItemId === item.id ? (
-              <TextInput
-                style={[
-                  styles.itemText,
-                  { color: theme.textPrimary, borderBottomWidth: 1, borderBottomColor: theme.primary, paddingBottom: 5 }
-                ]}
-                value={editText}
-                onChangeText={setEditText}
-                autoFocus
-                onBlur={() => saveEdit(item.id)}
-                onSubmitEditing={() => saveEdit(item.id)}
-              />
-            ) : (
-              <Text style={[
-                styles.itemText, 
-                { color: theme.textPrimary },
-                item.completed && [
-                  styles.completedText,
-                  { 
-                    color: theme.textSecondary,
-                    textDecorationColor: theme.textSecondary
-                  }
-                ]
+            <View style={styles.itemTitleContainer}>
+              {editingItemId === item.id ? (
+                <TextInput
+                  style={[
+                    styles.itemText,
+                    { color: theme.textPrimary, borderBottomWidth: 1, borderBottomColor: theme.primary, paddingBottom: 5 }
+                  ]}
+                  value={editText}
+                  onChangeText={setEditText}
+                  autoFocus
+                  onBlur={() => saveEdit(item.id)}
+                  onSubmitEditing={() => saveEdit(item.id)}
+                />
+              ) : (
+                <Text style={[
+                  styles.itemText, 
+                  { color: theme.textPrimary },
+                  item.completed && [
+                    styles.completedText,
+                    { color: theme.textSecondary, textDecorationColor: theme.textSecondary }
+                  ]
+                ]}>
+                  {item.name}
+                </Text>
+              )}
+              
+              <View style={[
+                styles.categoryTag,
+                { 
+                  backgroundColor: categories[item.category as CategoryType].lightColor,
+                  borderColor: categories[item.category as CategoryType].color,
+                }
               ]}>
-                {item.name}
-              </Text>
-            )}
-
-            <View style={[
-              styles.categoryLabel,
-              { backgroundColor: categories[item.category as CategoryType].lightColor }
-            ]}>
-              <Text style={[
-                styles.categoryLabelText,
-                { color: categories[item.category as CategoryType].color }
-              ]}>
-                {categories[item.category as CategoryType].icon} {item.category}
-              </Text>
+                <Text style={styles.categoryIcon}>
+                  {categories[item.category as CategoryType].icon}
+                </Text>
+                <Text style={[
+                  styles.categoryTagText,
+                  { color: categories[item.category as CategoryType].color }
+                ]}>
+                  {item.category}
+                </Text>
+              </View>
             </View>
           </View>
           
@@ -726,7 +731,10 @@ export default function ShoppingListScreen() {
             transparent={true}
             onRequestClose={() => setShowAddModal(false)}>
             <View style={styles.modalOverlay}>
-              <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
+              <View style={[
+                styles.modalContent,
+                { backgroundColor: theme.background }
+              ]}>
                 <View style={styles.modalHeader}>
                   <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>
                     Novo Item
@@ -760,22 +768,24 @@ export default function ShoppingListScreen() {
                 </Text>
 
                 <View style={styles.categoriesGrid}>
-                  {Object.entries(categories).map(([category, { color, icon }]) => (
+                  {Object.entries(categories).map(([category, { color, icon, lightColor }]) => (
                     <TouchableOpacity
                       key={category}
                       style={[
                         styles.categoryChip,
                         { 
-                          backgroundColor: newItemCategory === category ? color : 'transparent',
-                          borderWidth: 1,
-                          borderColor: color,
+                          backgroundColor: newItemCategory === category ? color : lightColor,
+                          borderWidth: 0,
                         }
                       ]}
                       onPress={() => setNewItemCategory(category)}>
                       <Text style={styles.categoryIcon}>{icon}</Text>
                       <Text style={[
                         styles.categoryText,
-                        { color: newItemCategory === category ? '#FFFFFF' : color }
+                        { 
+                          color: newItemCategory === category ? '#FFFFFF' : color,
+                          fontWeight: newItemCategory === category ? '600' : '500'
+                        }
                       ]}>
                         {category}
                       </Text>
@@ -822,7 +832,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    paddingBottom: 90,
+    paddingBottom: 20,
   },
   header: {
     flexDirection: 'row',
@@ -995,12 +1005,22 @@ const styles = StyleSheet.create({
   itemContent: {
     flex: 1,
   },
+  itemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  itemTitleContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   itemText: {
     flex: 1,
     fontSize: 17,
     fontWeight: '600',
     letterSpacing: -0.2,
-    marginRight: 8,
   },
   completedText: {
     textDecorationLine: 'line-through',
@@ -1123,7 +1143,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 24,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1155,16 +1175,16 @@ const styles = StyleSheet.create({
   categoriesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginHorizontal: -6,
+    marginHorizontal: -4,
     marginBottom: 24,
   },
   categoryChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    margin: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    margin: 4,
     flex: 1,
     minWidth: '45%',
     justifyContent: 'center',
@@ -1189,16 +1209,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   categoryIcon: {
-    fontSize: 16,
-    marginRight: 6,
+    fontSize: 14,
+    marginRight: 4,
   },
   categoryText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
   },
   floatingButtonContainer: {
     position: 'absolute',
-    bottom: 30,
+    bottom: 20,
     right: 30,
     zIndex: 999,
   },
@@ -1214,14 +1233,17 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 8,
   },
-  itemHeader: {
+  categoryTag: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  handleContainer: {
-    paddingVertical: 12,
     alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginLeft: 8,
+    borderWidth: 1,
+  },
+  categoryTagText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
