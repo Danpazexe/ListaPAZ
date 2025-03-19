@@ -61,30 +61,15 @@ const categories = {
     lightColor: '#E8F5E9',
     icon: '🥑'
   },
-  Bebidas: {
-    color: '#2196F3',
-    lightColor: '#E3F2FD',
-    icon: '🥤'
-  },
-  Limpeza: {
-    color: '#9C27B0',
-    lightColor: '#F3E5F5',
-    icon: '🧹'
-  },
-  Higiene: {
-    color: '#00BCD4',
-    lightColor: '#E0F7FA',
-    icon: '🧴'
-  },
   Hortifruti: {
     color: '#8BC34A',
     lightColor: '#F1F8E9',
     icon: '🥬'
   },
-  Outros: {
-    color: '#FF9800',
-    lightColor: '#FFF3E0',
-    icon: '📦'
+  Limpeza: {
+    color: '#9C27B0',
+    lightColor: '#F3E5F5',
+    icon: '🧹'
   }
 };
 
@@ -462,7 +447,10 @@ export default function ShoppingListScreen(props: any) {
           </View>
           
           {item.addedBy && (
-            <Text style={[styles.addedByText, { color: theme.textSecondary }]}>
+            <Text style={[
+              styles.addedByText, 
+              { color: theme.textSecondary }
+            ]}>
               Adicionado por {item.addedBy}
             </Text>
           )}
@@ -680,12 +668,32 @@ export default function ShoppingListScreen(props: any) {
 
           <Modal
             visible={showAddModal}
-            animationType="slide"
+            animationType="fade"
             transparent={true}
-            onRequestClose={() => setShowAddModal(false)}
-          >
-            <View style={styles.modalOverlay}>
-              <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
+            statusBarTranslucent={true}
+            onRequestClose={() => setShowAddModal(false)}>
+            <Animated.View 
+              style={[
+                styles.modalOverlay,
+                { 
+                  backgroundColor: 'rgba(0,0,0,0.5)',
+                }
+              ]}>
+              <Pressable 
+                style={{ flex: 1 }} 
+                onPress={() => setShowAddModal(false)} 
+              />
+              <Animated.View 
+                style={[
+                  styles.modalContent,
+                  { 
+                    backgroundColor: theme.background,
+                    transform: [
+                      { translateY: 0 }
+                    ]
+                  }
+                ]}>
+                <View style={styles.modalHandle} />
                 <View style={styles.modalHeader}>
                   <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>
                     Adicionar Item
@@ -746,24 +754,18 @@ export default function ShoppingListScreen(props: any) {
 
                 <TouchableOpacity
                   style={[
-                    styles.modalAddButton,
+                    styles.addButton,
                     { 
-                      backgroundColor: newItem.trim() ? theme.primary : '#E0E0E0',
+                      backgroundColor: newItem.trim() ? theme.primary : theme.border,
+                      opacity: newItem.trim() ? 1 : 0.7 
                     }
                   ]}
                   onPress={addItem}
-                  disabled={!newItem.trim()}
-                  activeOpacity={0.8}>
-                  <Text style={[
-                    styles.modalAddButtonText,
-                    { color: newItem.trim() ? '#FFFFFF' : '#9E9E9E' }
-                  ]}>
-                    Adicionar Item
-                  </Text>
-                  <Plus size={20} color={newItem.trim() ? '#FFFFFF' : '#9E9E9E'} />
+                  disabled={!newItem.trim()}>
+                  <Text style={styles.addButtonText}>Adicionar</Text>
                 </TouchableOpacity>
-              </View>
-            </View>
+              </Animated.View>
+            </Animated.View>
           </Modal>
 
           {renderFloatingButton()}
@@ -950,12 +952,6 @@ const styles = StyleSheet.create({
   itemContent: {
     flex: 1,
   },
-  itemHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
   itemText: {
     flex: 1,
     fontSize: 17,
@@ -1077,7 +1073,6 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -1085,6 +1080,19 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     padding: 24,
     paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 20,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 16,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1097,7 +1105,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   closeButton: {
-    padding: 4,
+    padding: 8,
+    margin: -8,
+    borderRadius: 20,
   },
   modalInput: {
     borderRadius: 12,
@@ -1111,14 +1121,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   categoryLabel: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-  },
-  categoryLabelText: {
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: '600',
+    marginTop: 20,
+    marginBottom: 12,
   },
   categoriesContainer: {
     flexDirection: 'row',
@@ -1158,22 +1164,21 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 8,
   },
-  modalAddButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
+  categoryLabel: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 12,
-    marginTop: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    marginBottom: 8,
   },
-  modalAddButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginRight: 8,
+  categoryLabelText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  itemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
   },
 });
