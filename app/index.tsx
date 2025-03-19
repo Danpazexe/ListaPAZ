@@ -4,14 +4,17 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   StatusBar,
   SafeAreaView,
   Dimensions,
+  Animated,
+  Platform,
+  Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import { ShoppingBag } from 'lucide-react-native';
+import { ShoppingBag, ArrowRight } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 
 const { width } = Dimensions.get('window');
 
@@ -58,8 +61,29 @@ export const userThemes = {
   }
 };
 
+// Dados dos usuários com mais informações
+const userProfiles = {
+  Daniel: {
+    name: 'Daniel',
+    initial: 'D',
+    items: 12,
+    lastActive: 'Hoje',
+    theme: 'Azul',
+  },
+  Kivhia: {
+    name: 'Kivhia',
+    initial: 'K',
+    items: 8,
+    lastActive: 'Ontem',
+    theme: 'Roxo',
+  }
+};
+
 export default function EntryScreen() {
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [slideAnim] = useState(new Animated.Value(30));
+  const [buttonAnim] = useState(new Animated.Value(0));
 
   useEffect(() => {
     // Verificar se já existe um usuário salvo
@@ -75,13 +99,44 @@ export default function EntryScreen() {
     };
 
     checkSavedUser();
+    
+    // Animação de entrada
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, []);
 
+  // Animar botão quando um usuário é selecionado
+  useEffect(() => {
+    if (selectedUser) {
+      Animated.spring(buttonAnim, {
+        toValue: 1,
+        friction: 7,
+        tension: 40,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      buttonAnim.setValue(0);
+    }
+  }, [selectedUser]);
+
   const selectUser = async (user: string) => {
+    // Feedback tátil
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
     setSelectedUser(user);
+    
     try {
       await AsyncStorage.setItem('currentUser', user);
-      // Salvar o tema do usuário
       await AsyncStorage.setItem('userTheme', JSON.stringify(userThemes[user as keyof typeof userThemes]));
     } catch (error) {
       console.error('Erro ao salvar usuário:', error);
@@ -90,96 +145,185 @@ export default function EntryScreen() {
 
   const continueToApp = async () => {
     if (selectedUser) {
-      router.replace('/(tabs)');
+      // Feedback tátil
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      
+      // Animação de saída
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: -30,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        router.replace('/(tabs)');
+      });
     }
   };
 
   // Obter o tema do usuário selecionado ou usar o tema padrão
   const theme = selectedUser ? userThemes[selectedUser as keyof typeof userThemes] : userThemes.Daniel;
 
+  // Animação do botão
+  const buttonScale = buttonAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.8, 1]
+  });
+  
+  const buttonOpacity = buttonAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1]
+  });
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <StatusBar barStyle="dark-content" backgroundColor={theme.background} />
       
-      <View style={styles.header}>
-        <View style={[styles.logoContainer, { backgroundColor: theme.cardBackground }]}>
-          <ShoppingBag size={32} color={theme.primary} />
-        </View>
-        <Text style={[styles.title, { color: theme.textPrimary }]}>Lista de Compras</Text>
-        <Text style={[styles.subtitle, { color: theme.textSecondary }]}>Quem está usando o app hoje?</Text>
-      </View>
-      
-      <View style={styles.userContainer}>
-        <TouchableOpacity
-          style={[
-            styles.userCard,
-            { backgroundColor: userThemes.Daniel.cardBackground, borderColor: userThemes.Daniel.cardBackground },
-            selectedUser === 'Daniel' && { borderColor: userThemes.Daniel.primary }
-          ]}
-          onPress={() => selectUser('Daniel')}
-        >
-          <View style={[
-            styles.userAvatar,
-            { backgroundColor: selectedUser === 'Daniel' ? userThemes.Daniel.primary : '#EFF2F7' }
-          ]}>
-            <Text style={[
-              styles.userInitial,
-              { color: selectedUser === 'Daniel' ? '#FFFFFF' : userThemes.Daniel.textSecondary }
-            ]}>D</Text>
-          </View>
-          <Text style={[
-            styles.userName,
-            { color: userThemes.Daniel.textPrimary },
-            selectedUser === 'Daniel' && { color: userThemes.Daniel.primary, fontWeight: 'bold' }
-          ]}>Daniel</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[
-            styles.userCard,
-            { backgroundColor: userThemes.Kivhia.cardBackground, borderColor: userThemes.Kivhia.cardBackground },
-            selectedUser === 'Kivhia' && { borderColor: userThemes.Kivhia.primary }
-          ]}
-          onPress={() => selectUser('Kivhia')}
-        >
-          <View style={[
-            styles.userAvatar,
-            { backgroundColor: selectedUser === 'Kivhia' ? userThemes.Kivhia.primary : '#EFF2F7' }
-          ]}>
-            <Text style={[
-              styles.userInitial,
-              { color: selectedUser === 'Kivhia' ? '#FFFFFF' : userThemes.Kivhia.textSecondary }
-            ]}>K</Text>
-          </View>
-          <Text style={[
-            styles.userName,
-            { color: userThemes.Kivhia.textPrimary },
-            selectedUser === 'Kivhia' && { color: userThemes.Kivhia.primary, fontWeight: 'bold' }
-          ]}>Kivhia</Text>
-        </TouchableOpacity>
-      </View>
-      
-      <TouchableOpacity
+      <Animated.View 
         style={[
-          styles.continueButton,
-          { backgroundColor: theme.primary },
-          !selectedUser && styles.continueButtonDisabled
-        ]}
-        onPress={continueToApp}
-        disabled={!selectedUser}
-      >
-        <Text style={styles.continueButtonText}>Continuar</Text>
-      </TouchableOpacity>
-      
-      <View style={styles.footer}>
-        <Image
-          source={{ uri: 'https://cdn-icons-png.flaticon.com/512/1261/1261163.png' }}
-          style={styles.footerImage}
-        />
-        <Text style={[styles.footerText, { color: theme.textSecondary }]}>
-          Compartilhe sua lista de compras
-        </Text>
-      </View>
+          styles.content, 
+          { 
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }]
+          }
+        ]}>
+        
+        <View style={styles.header}>
+          <View style={[styles.logoContainer, { backgroundColor: theme.cardBackground }]}>
+            <ShoppingBag size={32} color={theme.primary} />
+          </View>
+          
+          <Text style={[styles.title, { color: theme.textPrimary }]}>
+            Lista de Compras
+          </Text>
+          
+          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+            Selecione seu perfil para continuar
+          </Text>
+        </View>
+        
+        <View style={styles.profilesContainer}>
+          <TouchableOpacity
+            style={[
+              styles.profileCard,
+              { 
+                backgroundColor: selectedUser === 'Daniel' 
+                  ? theme.cardBackground 
+                  : '#F8F9FA',
+                borderColor: selectedUser === 'Daniel' 
+                  ? theme.primary 
+                  : 'transparent',
+                borderWidth: selectedUser === 'Daniel' ? 2 : 0,
+              }
+            ]}
+            onPress={() => selectUser('Daniel')}
+            activeOpacity={0.8}>
+            
+            <View style={styles.profileImageContainer}>
+              <View style={[
+                styles.profileImage,
+                { backgroundColor: userThemes.Daniel.primary }
+              ]}>
+                <Text style={styles.profileInitial}>D</Text>
+              </View>
+              
+              {selectedUser === 'Daniel' && (
+                <View style={[styles.selectedIndicator, { backgroundColor: theme.primary }]} />
+              )}
+            </View>
+            
+            <Text style={[
+              styles.profileName,
+              { 
+                color: selectedUser === 'Daniel' 
+                  ? theme.primary 
+                  : theme.textPrimary,
+                fontWeight: selectedUser === 'Daniel' ? '700' : '600'
+              }
+            ]}>
+              Daniel
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[
+              styles.profileCard,
+              { 
+                backgroundColor: selectedUser === 'Kivhia' 
+                  ? theme.cardBackground 
+                  : '#F8F9FA',
+                borderColor: selectedUser === 'Kivhia' 
+                  ? userThemes.Kivhia.primary 
+                  : 'transparent',
+                borderWidth: selectedUser === 'Kivhia' ? 2 : 0,
+              }
+            ]}
+            onPress={() => selectUser('Kivhia')}
+            activeOpacity={0.8}>
+            
+            <View style={styles.profileImageContainer}>
+              <View style={[
+                styles.profileImage,
+                { backgroundColor: userThemes.Kivhia.primary }
+              ]}>
+                <Text style={styles.profileInitial}>K</Text>
+              </View>
+              
+              {selectedUser === 'Kivhia' && (
+                <View style={[styles.selectedIndicator, { backgroundColor: userThemes.Kivhia.primary }]} />
+              )}
+            </View>
+            
+            <Text style={[
+              styles.profileName,
+              { 
+                color: selectedUser === 'Kivhia' 
+                  ? userThemes.Kivhia.primary 
+                  : theme.textPrimary,
+                fontWeight: selectedUser === 'Kivhia' ? '700' : '600'
+              }
+            ]}>
+              Kivhia
+            </Text>
+          </TouchableOpacity>
+        </View>
+        
+        <View style={styles.bottomContainer}>
+          <Animated.View style={{
+            opacity: buttonOpacity,
+            transform: [{ scale: buttonScale }],
+          }}>
+            <TouchableOpacity
+              style={[
+                styles.continueButton,
+                { 
+                  backgroundColor: selectedUser 
+                    ? (selectedUser === 'Daniel' 
+                        ? userThemes.Daniel.primary 
+                        : userThemes.Kivhia.primary)
+                    : '#E0E0E0',
+                }
+              ]}
+              onPress={continueToApp}
+              disabled={!selectedUser}
+              activeOpacity={0.8}>
+              <Text style={styles.continueButtonText}>
+                Continuar
+              </Text>
+              <ArrowRight size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </Animated.View>
+          
+          <Text style={styles.appInfo}>
+            v2.0 • Desenvolvido com ♥
+          </Text>
+        </View>
+      </Animated.View>
     </SafeAreaView>
   );
 }
@@ -187,107 +331,113 @@ export default function EntryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+  },
+  content: {
+    flex: 1,
+    padding: 24,
+    justifyContent: 'space-between',
   },
   header: {
     alignItems: 'center',
     marginTop: 40,
-    marginBottom: 60,
   },
   logoContainer: {
     width: 80,
     height: 80,
-    backgroundColor: '#E1F5FE',
-    borderRadius: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 18,
-    color: '#7F8C8D',
+    marginBottom: 12,
     textAlign: 'center',
   },
-  userContainer: {
+  subtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 10,
+    opacity: 0.8,
+  },
+  profilesContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 60,
+    justifyContent: 'space-around',
+    marginVertical: 40,
   },
-  userCard: {
-    width: width * 0.42,
-    backgroundColor: '#F5F7FA',
-    borderRadius: 20,
+  profileCard: {
+    width: width * 0.4,
     padding: 20,
+    borderRadius: 16,
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#F5F7FA',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  selectedUserCard: {
-    borderColor: '#3498DB',
-    backgroundColor: '#E1F5FE',
+  profileImageContainer: {
+    position: 'relative',
+    marginBottom: 16,
   },
-  userAvatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#EFF2F7',
+  profileImage: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 15,
   },
-  selectedUserAvatar: {
-    backgroundColor: '#3498DB',
-  },
-  userInitial: {
-    fontSize: 32,
+  profileInitial: {
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#7F8C8D',
-  },
-  selectedUserInitial: {
     color: '#FFFFFF',
   },
-  userName: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#2C3E50',
+  selectedIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
-  selectedUserName: {
-    color: '#3498DB',
+  profileName: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  bottomContainer: {
+    alignItems: 'center',
+    marginBottom: Platform.OS === 'ios' ? 30 : 20,
   },
   continueButton: {
-    backgroundColor: '#3498DB',
-    borderRadius: 16,
-    padding: 18,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 30,
-  },
-  continueButtonDisabled: {
-    backgroundColor: '#B3C2D1',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   continueButtonText: {
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: 'bold',
+    marginRight: 8,
   },
-  footer: {
-    alignItems: 'center',
-    marginTop: 'auto',
-  },
-  footerImage: {
-    width: 100,
-    height: 100,
-    opacity: 0.8,
-    marginBottom: 10,
-  },
-  footerText: {
-    fontSize: 16,
-    color: '#95A5A6',
-    textAlign: 'center',
+  appInfo: {
+    marginTop: 16,
+    fontSize: 12,
+    opacity: 0.7,
   },
 }); 
