@@ -17,6 +17,7 @@ import {
   ScrollView,
   Modal,
   SafeAreaView,
+  PanResponder,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Plus, Trash2, Check, Search, X, ShoppingBag, Edit } from 'lucide-react-native';
@@ -34,14 +35,6 @@ import {
   setupRealtimeSubscription,
   ShoppingItem
 } from '../lib/supabase';
-
-type RouteParams = {
-  showAddModal?: boolean;
-};
-
-type Props = {
-  route?: RouteProp<Record<string, RouteParams>, string>;
-};
 
 type CategoryType = keyof typeof categories;
 
@@ -61,20 +54,34 @@ const categories = {
     lightColor: '#E8F5E9',
     icon: '🥑'
   },
-  Hortifruti: {
-    color: '#8BC34A',
-    lightColor: '#F1F8E9',
-    icon: '🥬'
+  Bebidas: {
+    color: '#2196F3',
+    lightColor: '#E3F2FD',
+    icon: '🥤'
   },
   Limpeza: {
     color: '#9C27B0',
     lightColor: '#F3E5F5',
     icon: '🧹'
+  },
+  Higiene: {
+    color: '#00BCD4',
+    lightColor: '#E0F7FA',
+    icon: '🧴'
+  },
+  Hortifruti: {
+    color: '#8BC34A',
+    lightColor: '#F1F8E9',
+    icon: '🥬'
+  },
+  Outros: {
+    color: '#FF9800',
+    lightColor: '#FFF3E0',
+    icon: '📦'
   }
 };
 
-export default function ShoppingListScreen(props: any) {
-  const route = props?.route || {};
+export default function ShoppingListScreen() {
   const [items, setItems] = useState<Item[]>([]);
   const [newItem, setNewItem] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -91,6 +98,42 @@ export default function ShoppingListScreen(props: any) {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   const [newItemCategory, setNewItemCategory] = useState('Outros');
+  const translateY = useRef(new Animated.Value(0)).current;
+  const lastGestureDy = useRef(0);
+  const modalTranslateY = useRef(new Animated.Value(1000)).current;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        lastGestureDy.current = 0;
+      },
+      onPanResponderMove: (_, gesture) => {
+        if (gesture.dy > 0) { // Só permite arrastar para baixo
+          translateY.setValue(gesture.dy);
+          lastGestureDy.current = gesture.dy;
+        }
+      },
+      onPanResponderRelease: (_, gesture) => {
+        if (lastGestureDy.current > 50) { // Se arrastou mais que 50px, fecha o modal
+          Animated.timing(translateY, {
+            toValue: 400,
+            duration: 200,
+            useNativeDriver: true,
+          }).start(() => {
+            setShowAddModal(false);
+            translateY.setValue(0);
+          });
+        } else { // Senão, volta para a posição original
+          Animated.spring(translateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            friction: 8,
+          }).start();
+        }
+      },
+    })
+  ).current;
 
   useEffect(() => {
     loadItems();
@@ -123,16 +166,6 @@ export default function ShoppingListScreen(props: any) {
       subscription.unsubscribe();
     };
   }, []);
-
-  useEffect(() => {
-    if (route.params?.showAddModal) {
-      setShowAddModal(true);
-      // Limpar o parâmetro para não reabrir o modal em atualizações futuras
-      if (route.params) {
-        route.params.showAddModal = false;
-      }
-    }
-  }, [route.params]);
 
   const loadItems = async () => {
     setIsLoading(true);
@@ -528,6 +561,27 @@ export default function ShoppingListScreen(props: any) {
     );
   };
 
+  const openModal = () => {
+    setShowAddModal(true);
+    Animated.spring(modalTranslateY, {
+      toValue: 0,
+      useNativeDriver: true,
+      tension: 65,
+      friction: 11,
+    }).start();
+  };
+
+  const closeModal = () => {
+    Animated.timing(modalTranslateY, {
+      toValue: 1000,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowAddModal(false);
+      modalTranslateY.setValue(1000);
+    });
+  };
+
   const renderFloatingButton = () => {
     return (
       <View style={styles.floatingButtonContainer}>
@@ -536,7 +590,7 @@ export default function ShoppingListScreen(props: any) {
             styles.floatingAddButton,
             { backgroundColor: theme.primary }
           ]}
-          onPress={() => setShowAddModal(true)}>
+          onPress={openModal}>
           <Plus size={24} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
@@ -668,35 +722,14 @@ export default function ShoppingListScreen(props: any) {
 
           <Modal
             visible={showAddModal}
-            animationType="fade"
+            animationType="slide"
             transparent={true}
-            statusBarTranslucent={true}
             onRequestClose={() => setShowAddModal(false)}>
-            <Animated.View 
-              style={[
-                styles.modalOverlay,
-                { 
-                  backgroundColor: 'rgba(0,0,0,0.5)',
-                }
-              ]}>
-              <Pressable 
-                style={{ flex: 1 }} 
-                onPress={() => setShowAddModal(false)} 
-              />
-              <Animated.View 
-                style={[
-                  styles.modalContent,
-                  { 
-                    backgroundColor: theme.background,
-                    transform: [
-                      { translateY: 0 }
-                    ]
-                  }
-                ]}>
-                <View style={styles.modalHandle} />
+            <View style={styles.modalOverlay}>
+              <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
                 <View style={styles.modalHeader}>
                   <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>
-                    Adicionar Item
+                    Novo Item
                   </Text>
                   <TouchableOpacity
                     onPress={() => setShowAddModal(false)}
@@ -706,41 +739,39 @@ export default function ShoppingListScreen(props: any) {
                 </View>
 
                 <TextInput
-                  ref={newItemInputRef}
                   style={[
                     styles.modalInput,
                     { 
                       backgroundColor: theme.cardBackground,
-                      color: theme.textPrimary,
-                      borderColor: theme.border 
+                      borderColor: theme.border,
+                      color: theme.textPrimary 
                     }
                   ]}
                   placeholder="Nome do item"
                   placeholderTextColor={theme.textSecondary}
                   value={newItem}
                   onChangeText={setNewItem}
+                  onSubmitEditing={addItem}
+                  ref={newItemInputRef}
                 />
 
-                <Text style={[styles.categoryLabel, { color: theme.textSecondary }]}>
-                  Categoria
+                <Text style={[styles.categoryLabel, { color: theme.textPrimary }]}>
+                  Selecione uma categoria
                 </Text>
 
-                <ScrollView 
-                  horizontal 
-                  showsHorizontalScrollIndicator={false}
-                  style={styles.categoriesContainer}>
-                  {Object.entries(categories).map(([category, { color, lightColor, icon }]) => (
+                <View style={styles.categoriesGrid}>
+                  {Object.entries(categories).map(([category, { color, icon }]) => (
                     <TouchableOpacity
                       key={category}
                       style={[
                         styles.categoryChip,
                         { 
-                          backgroundColor: newItemCategory === category ? color : lightColor,
-                          borderColor: color,
+                          backgroundColor: newItemCategory === category ? color : 'transparent',
                           borderWidth: 1,
+                          borderColor: color,
                         }
                       ]}
-                      onPress={() => setNewItemCategory(category as CategoryType)}>
+                      onPress={() => setNewItemCategory(category)}>
                       <Text style={styles.categoryIcon}>{icon}</Text>
                       <Text style={[
                         styles.categoryText,
@@ -750,22 +781,34 @@ export default function ShoppingListScreen(props: any) {
                       </Text>
                     </TouchableOpacity>
                   ))}
-                </ScrollView>
+                </View>
 
-                <TouchableOpacity
-                  style={[
-                    styles.addButton,
-                    { 
-                      backgroundColor: newItem.trim() ? theme.primary : theme.border,
-                      opacity: newItem.trim() ? 1 : 0.7 
-                    }
-                  ]}
-                  onPress={addItem}
-                  disabled={!newItem.trim()}>
-                  <Text style={styles.addButtonText}>Adicionar</Text>
-                </TouchableOpacity>
-              </Animated.View>
-            </Animated.View>
+                <View style={styles.modalActions}>
+                  <TouchableOpacity
+                    style={[styles.modalCancelButton]}
+                    onPress={() => setShowAddModal(false)}>
+                    <Text style={[styles.modalButtonText, { color: theme.textSecondary }]}>
+                      Cancelar
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.modalAddButton,
+                      { 
+                        backgroundColor: newItem.trim() ? theme.primary : theme.border,
+                        opacity: newItem.trim() ? 1 : 0.7 
+                      }
+                    ]}
+                    onPress={addItem}
+                    disabled={!newItem.trim()}>
+                    <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>
+                      Adicionar
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
           </Modal>
 
           {renderFloatingButton()}
@@ -1073,6 +1116,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -1080,19 +1124,6 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     padding: 24,
     paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 20,
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 16,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1101,7 +1132,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   modalTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
   },
   closeButton: {
@@ -1114,29 +1145,48 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 16,
     borderWidth: 1,
-  },
-  addButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
+    marginBottom: 24,
   },
   categoryLabel: {
     fontSize: 16,
-    fontWeight: '600',
-    marginTop: 20,
-    marginBottom: 12,
+    fontWeight: '500',
+    marginBottom: 16,
   },
-  categoriesContainer: {
+  categoriesGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -6,
     marginBottom: 24,
   },
   categoryChip: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+    margin: 6,
+    flex: 1,
+    minWidth: '45%',
+    justifyContent: 'center',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+  },
+  modalCancelButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  modalAddButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   categoryIcon: {
     fontSize: 16,
@@ -1164,21 +1214,14 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 8,
   },
-  categoryLabel: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  categoryLabelText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
   itemHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 8,
+  },
+  handleContainer: {
+    paddingVertical: 12,
+    alignItems: 'center',
   },
 });
