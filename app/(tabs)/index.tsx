@@ -526,64 +526,62 @@ export default function ShoppingListScreen(props: any) {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
           
-          <View style={[styles.header, { borderBottomColor: theme.border }]}>
-            <View style={styles.titleContainer}>
-              <View style={[styles.titleIconContainer, { backgroundColor: theme.cardBackground }]}>
-                <ShoppingBag size={24} color={theme.primary} />
+          <View style={[
+            styles.header, 
+            { 
+              backgroundColor: theme.background,
+              paddingTop: insets.top || 40,
+              borderBottomColor: theme.border 
+            }
+          ]}>
+            <View style={styles.headerContent}>
+              <View style={styles.titleContainer}>
+                <ShoppingBag size={24} color={theme.primary} style={{ marginRight: 10 }} />
+                <Text style={[styles.title, { color: theme.textPrimary }]}>
+                  Lista de Compras
+                </Text>
               </View>
-              <Text style={[styles.title, { color: theme.textPrimary }]}>Lista de Compras</Text>
-            </View>
-            
-            <View style={styles.headerButtons}>
-              <TouchableOpacity
-                style={[styles.searchButton, { backgroundColor: theme.cardBackground }]}
-                onPress={() => setShowSearch(!showSearch)}>
+              
+              <View style={styles.headerActions}>
                 {showSearch ? (
-                  <X size={22} color={theme.primary} />
-                ) : (
-                  <Search size={22} color={theme.primary} />
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={[styles.searchContainer, { backgroundColor: theme.cardBackground, borderColor: theme.border }]}>
-            <Search size={20} color={theme.textSecondary} style={styles.searchIcon} />
-            <TextInput
-              style={[styles.searchInput, { color: theme.textPrimary }]}
-              placeholder="Buscar ou adicionar item..."
-              placeholderTextColor={theme.textSecondary}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              onSubmitEditing={() => {
-                if (searchQuery.trim() && !items.some(item => 
-                  item.name.toLowerCase() === searchQuery.toLowerCase()
-                )) {
-                  Alert.alert(
-                    "Adicionar Item",
-                    `Deseja adicionar "${searchQuery}" à lista?`,
-                    [
-                      { text: "Cancelar", style: "cancel" },
-                      { 
-                        text: "Adicionar", 
-                        onPress: () => {
-                          setNewItem(searchQuery);
-                          addItem();
-                          setSearchQuery('');
+                  <View style={styles.searchContainer}>
+                    <TextInput
+                      style={[
+                        styles.searchInput,
+                        { 
+                          backgroundColor: theme.cardBackground,
+                          color: theme.textPrimary,
+                          borderColor: theme.border
                         }
-                      }
-                    ]
-                  );
-                }
-              }}
-            />
-            {searchQuery ? (
-              <TouchableOpacity
-                style={[styles.clearButton, { backgroundColor: theme.border }]}
-                onPress={() => setSearchQuery('')}>
-                <X size={16} color={theme.textSecondary} />
-              </TouchableOpacity>
-            ) : null}
+                      ]}
+                      placeholder="Buscar item..."
+                      placeholderTextColor={theme.textSecondary}
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
+                      autoFocus
+                    />
+                    <TouchableOpacity
+                      style={styles.searchCloseButton}
+                      onPress={() => {
+                        setShowSearch(false);
+                        setSearchQuery('');
+                      }}>
+                      <X size={20} color={theme.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  // Apenas um botão de busca
+                  <TouchableOpacity
+                    style={[
+                      styles.headerButton,
+                      { backgroundColor: theme.cardBackground }
+                    ]}
+                    onPress={() => setShowSearch(true)}>
+                    <Search size={20} color={theme.primary} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
           </View>
 
           {items.length === 0 ? (
@@ -707,6 +705,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     paddingBottom: 15,
   },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   titleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -724,10 +727,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#2C3E50',
   },
-  headerButtons: {
+  headerActions: {
     flexDirection: 'row',
   },
-  searchButton: {
+  headerButton: {
     padding: 8,
     borderRadius: 12,
     width: 40,
@@ -743,15 +746,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  searchIcon: {
-    marginRight: 10,
-  },
   searchInput: {
     flex: 1,
     fontSize: 16,
     color: '#34495E',
   },
-  clearButton: {
+  searchCloseButton: {
     backgroundColor: '#E8EDF1',
     borderRadius: 10,
     padding: 5,
