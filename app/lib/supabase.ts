@@ -15,8 +15,8 @@ export interface ShoppingItem {
   completed: boolean;
   quantity: number;
   created_at: string;
-  added_by?: string;
-  priority?: boolean;
+  added_by: string;
+  category: string;
 }
 
 // Funções para interagir com o banco de dados
@@ -36,35 +36,48 @@ export async function fetchItems() {
 }
 
 // Adicionar um novo item
-export async function addItem(item: Omit<ShoppingItem, 'created_at'> & { createdAt: number }) {
-  const { error } = await supabase
+export const addItem = async (item: {
+  id: string;
+  name: string;
+  completed: boolean;
+  quantity?: number;
+  createdAt: number;
+  addedBy: string;
+  category: string;
+}) => {
+  const { data, error } = await supabase
     .from('shopping_items')
-    .insert({
-      id: item.id,
-      name: item.name,
-      completed: item.completed,
-      quantity: item.quantity,
-      created_at: new Date(item.createdAt).toISOString(),
-      added_by: item.added_by,
-      priority: item.priority
-    });
-    
-  if (error) {
-    throw new Error(`Erro ao adicionar item: ${error.message}`);
-  }
-}
+    .insert([
+      {
+        id: item.id,
+        name: item.name,
+        completed: item.completed,
+        quantity: item.quantity || 1,
+        added_by: item.addedBy,
+        category: item.category,
+        created_at: new Date(item.createdAt).toISOString(),
+      }
+    ])
+    .select();
+
+  if (error) throw error;
+  return data;
+};
 
 // Atualizar um item existente
-export async function updateItem(id: string, updates: Partial<ShoppingItem>) {
-  const { error } = await supabase
+export const updateItem = async (id: string, updates: Partial<ShoppingItem>) => {
+  const { data, error } = await supabase
     .from('shopping_items')
-    .update(updates)
-    .eq('id', id);
-    
-  if (error) {
-    throw new Error(`Erro ao atualizar item: ${error.message}`);
-  }
-}
+    .update({
+      ...updates,
+      ...(updates.added_by && { added_by: updates.added_by }),
+    })
+    .eq('id', id)
+    .select();
+
+  if (error) throw error;
+  return data;
+};
 
 // Excluir um item
 export async function deleteItem(id: string) {
@@ -85,7 +98,7 @@ export function setupRealtimeSubscription(onUpdate: () => void) {
     .on('postgres_changes', { 
       event: '*', 
       schema: 'public', 
-      table: 'shopping_items' 
+      table: 'shopping_items'
     }, () => {
       onUpdate();
     })

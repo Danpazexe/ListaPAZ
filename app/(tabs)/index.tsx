@@ -43,6 +43,8 @@ type Props = {
   route?: RouteProp<Record<string, RouteParams>, string>;
 };
 
+type CategoryType = keyof typeof categories;
+
 type Item = {
   id: string;
   name: string;
@@ -50,7 +52,40 @@ type Item = {
   quantity: number;
   createdAt: number;
   addedBy?: string;
-  priority?: boolean;
+  category: CategoryType;
+};
+
+const categories = {
+  Alimentos: {
+    color: '#4CAF50',
+    lightColor: '#E8F5E9',
+    icon: '🥑'
+  },
+  Bebidas: {
+    color: '#2196F3',
+    lightColor: '#E3F2FD',
+    icon: '🥤'
+  },
+  Limpeza: {
+    color: '#9C27B0',
+    lightColor: '#F3E5F5',
+    icon: '🧹'
+  },
+  Higiene: {
+    color: '#00BCD4',
+    lightColor: '#E0F7FA',
+    icon: '🧴'
+  },
+  Hortifruti: {
+    color: '#8BC34A',
+    lightColor: '#F1F8E9',
+    icon: '🥬'
+  },
+  Outros: {
+    color: '#FF9800',
+    lightColor: '#FFF3E0',
+    icon: '📦'
+  }
 };
 
 export default function ShoppingListScreen(props: any) {
@@ -70,6 +105,7 @@ export default function ShoppingListScreen(props: any) {
   const newItemInputRef = useRef(null);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
+  const [newItemCategory, setNewItemCategory] = useState('Outros');
 
   useEffect(() => {
     loadItems();
@@ -127,7 +163,7 @@ export default function ShoppingListScreen(props: any) {
         quantity: item.quantity,
         createdAt: new Date(item.created_at).getTime(),
         addedBy: item.added_by,
-        priority: item.priority
+        category: item.category,
       }));
       
       setItems(formattedItems);
@@ -176,24 +212,26 @@ export default function ShoppingListScreen(props: any) {
 
   const addItem = async () => {
     if (newItem.trim()) {
-      const newItemData = {
+      const item = {
         id: Date.now().toString(),
         name: newItem.trim(),
         completed: false,
         quantity: 1,
+        category: newItemCategory,
         createdAt: Date.now(),
-        added_by: currentUser,
+        addedBy: currentUser,
       };
 
       // Atualizar UI imediatamente
-      const newItems = [newItemData, ...items];
+      const newItems = [item as Item, ...items];
       setItems(newItems);
       saveItems(newItems);
       setNewItem('');
+      setShowAddModal(false);
 
-      // Salvar no Supabase usando a função importada
+      // Salvar no Supabase
       try {
-        await addItemToDb(newItemData);
+        await addItemToDb(item);
       } catch (error) {
         console.error('Erro ao adicionar item:', error);
       }
@@ -218,14 +256,6 @@ export default function ShoppingListScreen(props: any) {
     } catch (error) {
       console.error('Erro ao atualizar item:', error);
     }
-  };
-
-  const togglePriority = (id: string) => {
-    const newItems = items.map(item =>
-      item.id === id ? { ...item, priority: !item.priority } : item
-    );
-    setItems(newItems);
-    saveItems(newItems);
   };
 
   const updateQuantity = async (id: string, increment: boolean) => {
@@ -311,17 +341,14 @@ export default function ShoppingListScreen(props: any) {
 
   const filteredItems = items
     .filter(item => {
-      // Filtrar por tab (todos ou pendentes)
       return activeTab === 'all' || !item.completed;
     })
     .filter(item =>
       item.name.toLowerCase().includes(searchQuery.toLowerCase())
     )
     .sort((a, b) => {
-      // Ordenar por status de conclusão
       if (a.completed !== b.completed) return a.completed ? 1 : -1;
       
-      // Por fim, por data de criação
       return b.createdAt - a.createdAt;
     });
 
@@ -392,39 +419,50 @@ export default function ShoppingListScreen(props: any) {
           style={styles.itemContent}
           onPress={() => toggleItem(item.id)}>
           
-          {editingItemId === item.id ? (
-            <TextInput
-              style={[
-                styles.itemText,
-                { color: theme.textPrimary, borderBottomWidth: 1, borderBottomColor: theme.primary, paddingBottom: 5 }
-              ]}
-              value={editText}
-              onChangeText={setEditText}
-              autoFocus
-              onBlur={() => saveEdit(item.id)}
-              onSubmitEditing={() => saveEdit(item.id)}
-            />
-          ) : (
-            <Text style={[
-              styles.itemText, 
-              { color: theme.textPrimary },
-              item.completed && [
-                styles.completedText,
-                { 
-                  color: theme.textSecondary,
-                  textDecorationColor: theme.textSecondary
-                }
-              ]
+          <View style={styles.itemHeader}>
+            {editingItemId === item.id ? (
+              <TextInput
+                style={[
+                  styles.itemText,
+                  { color: theme.textPrimary, borderBottomWidth: 1, borderBottomColor: theme.primary, paddingBottom: 5 }
+                ]}
+                value={editText}
+                onChangeText={setEditText}
+                autoFocus
+                onBlur={() => saveEdit(item.id)}
+                onSubmitEditing={() => saveEdit(item.id)}
+              />
+            ) : (
+              <Text style={[
+                styles.itemText, 
+                { color: theme.textPrimary },
+                item.completed && [
+                  styles.completedText,
+                  { 
+                    color: theme.textSecondary,
+                    textDecorationColor: theme.textSecondary
+                  }
+                ]
+              ]}>
+                {item.name}
+              </Text>
+            )}
+
+            <View style={[
+              styles.categoryLabel,
+              { backgroundColor: categories[item.category as CategoryType].lightColor }
             ]}>
-              {item.name}
-            </Text>
-          )}
+              <Text style={[
+                styles.categoryLabelText,
+                { color: categories[item.category as CategoryType].color }
+              ]}>
+                {categories[item.category as CategoryType].icon} {item.category}
+              </Text>
+            </View>
+          </View>
           
           {item.addedBy && (
-            <Text style={[
-              styles.addedByText, 
-              { color: theme.textSecondary }
-            ]}>
+            <Text style={[styles.addedByText, { color: theme.textSecondary }]}>
               Adicionado por {item.addedBy}
             </Text>
           )}
@@ -649,35 +687,80 @@ export default function ShoppingListScreen(props: any) {
             <View style={styles.modalOverlay}>
               <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
                 <View style={styles.modalHeader}>
-                  <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>Adicionar Item</Text>
-                  <TouchableOpacity onPress={() => setShowAddModal(false)}>
+                  <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>
+                    Adicionar Item
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setShowAddModal(false)}
+                    style={styles.closeButton}>
                     <X size={24} color={theme.textSecondary} />
                   </TouchableOpacity>
                 </View>
-                
+
                 <TextInput
                   ref={newItemInputRef}
-                  style={[styles.modalInput, { backgroundColor: theme.cardBackground, color: theme.textPrimary }]}
+                  style={[
+                    styles.modalInput,
+                    { 
+                      backgroundColor: theme.cardBackground,
+                      color: theme.textPrimary,
+                      borderColor: theme.border 
+                    }
+                  ]}
                   placeholder="Nome do item"
                   placeholderTextColor={theme.textSecondary}
                   value={newItem}
                   onChangeText={setNewItem}
-                  autoFocus
                 />
-                
+
+                <Text style={[styles.categoryLabel, { color: theme.textSecondary }]}>
+                  Categoria
+                </Text>
+
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.categoriesContainer}>
+                  {Object.entries(categories).map(([category, { color, lightColor, icon }]) => (
+                    <TouchableOpacity
+                      key={category}
+                      style={[
+                        styles.categoryChip,
+                        { 
+                          backgroundColor: newItemCategory === category ? color : lightColor,
+                          borderColor: color,
+                          borderWidth: 1,
+                        }
+                      ]}
+                      onPress={() => setNewItemCategory(category as CategoryType)}>
+                      <Text style={styles.categoryIcon}>{icon}</Text>
+                      <Text style={[
+                        styles.categoryText,
+                        { color: newItemCategory === category ? '#FFFFFF' : color }
+                      ]}>
+                        {category}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
                 <TouchableOpacity
                   style={[
-                    styles.modalButton,
-                    { backgroundColor: theme.primary },
-                    !newItem.trim() && { opacity: 0.5 }
+                    styles.modalAddButton,
+                    { 
+                      backgroundColor: newItem.trim() ? theme.primary : '#E0E0E0',
+                    }
                   ]}
+                  onPress={addItem}
                   disabled={!newItem.trim()}
-                  onPress={() => {
-                    addItem();
-                    setShowAddModal(false);
-                  }}
-                >
-                  <Text style={styles.modalButtonText}>Adicionar</Text>
+                  activeOpacity={0.8}>
+                  <Text style={[
+                    styles.modalAddButtonText,
+                    { color: newItem.trim() ? '#FFFFFF' : '#9E9E9E' }
+                  ]}>
+                    Adicionar Item
+                  </Text>
+                  <Plus size={20} color={newItem.trim() ? '#FFFFFF' : '#9E9E9E'} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -774,10 +857,12 @@ const styles = StyleSheet.create({
   addButton: {
     backgroundColor: '#3498DB',
     borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 8,
     width: 48,
     height: 48,
     justifyContent: 'center',
-    alignItems: 'center',
   },
   addButtonDisabled: {
     backgroundColor: '#B3C2D1',
@@ -865,11 +950,18 @@ const styles = StyleSheet.create({
   itemContent: {
     flex: 1,
   },
+  itemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
   itemText: {
+    flex: 1,
     fontSize: 17,
-    marginBottom: 10,
     fontWeight: '600',
     letterSpacing: -0.2,
+    marginRight: 8,
   },
   completedText: {
     textDecorationLine: 'line-through',
@@ -989,36 +1081,64 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    paddingBottom: 40,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
+  },
+  closeButton: {
+    padding: 4,
   },
   modalInput: {
     borderRadius: 12,
-    padding: 15,
+    padding: 16,
     fontSize: 16,
-    marginBottom: 20,
+    borderWidth: 1,
   },
-  modalButton: {
-    borderRadius: 12,
-    padding: 15,
-    alignItems: 'center',
-  },
-  modalButtonText: {
+  addButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  categoryLabel: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  categoryLabelText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  categoriesContainer: {
+    flexDirection: 'row',
+    marginBottom: 24,
+  },
+  categoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+  },
+  categoryIcon: {
+    fontSize: 16,
+    marginRight: 6,
+  },
+  categoryText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   floatingButtonContainer: {
     position: 'absolute',
@@ -1037,5 +1157,23 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 5,
     elevation: 8,
+  },
+  modalAddButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginTop: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  modalAddButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginRight: 8,
   },
 });
